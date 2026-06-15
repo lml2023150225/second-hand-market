@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '请填写所有字段' }, { status: 400 });
     }
 
-    const user = queryOne<{ id: number; username: string; password_hash: string }>(
+    const user = await queryOne<{ id: number; username: string; password_hash: string }>(
       'SELECT id, username, password_hash FROM users WHERE email = ? OR username = ?',
       email, email
     );

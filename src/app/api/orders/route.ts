@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne, execute } from '@/lib/db';
+import { query, queryOne, execute, insertOne } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { generateOrderNo, calcFee } from '@/lib/utils';
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const whereField = type === 'sell' ? 'seller_id' : 'buyer_id';
 
-  const orders = query(
+  const orders = await query(
     `SELECT o.*, p.title as product_title,
      (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY sort_order LIMIT 1) as cover_image,
      bu.username as buyer_name, su.username as seller_name
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     const { product_id } = await request.json();
 
-    const product = queryOne<{
+    const product = await queryOne<{
       id: number; seller_id: number; title: string; price: number; status: string;
     }>('SELECT * FROM products WHERE id = ?', product_id);
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check pending order
-    const pending = queryOne(
+    const pending = await queryOne(
       "SELECT id FROM orders WHERE buyer_id = ? AND product_id = ? AND status = 'pending'",
       user.id, product_id
     );
@@ -64,19 +64,19 @@ export async function POST(request: NextRequest) {
     const fee = calcFee(product.price);
     const total = Math.round((product.price + fee) * 100) / 100;
 
-    const result = execute(
+    const orderId = await insertOne(
       `INSERT INTO orders (order_no, buyer_id, seller_id, product_id, amount, fee_rate, fee, total, status)
        VALUES (?, ?, ?, ?, ?, 0.05, ?, ?, 'pending')`,
       orderNo, user.id, product.seller_id, product.id, product.price, fee, total
     );
 
     // Update product status
-    execute("UPDATE products SET status = 'sold' WHERE id = ?", product.id);
+    await execute("UPDATE products SET status = 'sold' WHERE id = ?", product.id);
 
     // Remove from cart
-    execute('DELETE FROM cart_items WHERE product_id = ? AND user_id = ?', product.id, user.id);
+    await execute('DELETE FROM cart_items WHERE product_id = ? AND user_id = ?', product.id, user.id);
 
-    const order = queryOne('SELECT * FROM orders WHERE id = ?', result.lastInsertRowid);
+    const order = await queryOne('SELECT * FROM orders WHERE id = ?', orderId);
 
     return NextResponse.json({ success: true, order });
   } catch (error) {

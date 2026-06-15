@@ -1,25 +1,40 @@
-import { getDb } from '../../database/init';
+import { sql } from '@vercel/postgres';
 
-export function query<T = any>(sql: string, ...params: any[]): T[] {
-  const db = getDb();
-  const stmt = db.prepare(sql);
-  return stmt.all(...params) as T[];
+function convertPlaceholders(sqlStr: string, params: any[]): { text: string; values: any[] } {
+  let index = 0;
+  const text = sqlStr.replace(/\?/g, () => {
+    index++;
+    return `$${index}`;
+  });
+  return { text, values: params };
 }
 
-export function queryOne<T = any>(sql: string, ...params: any[]): T | undefined {
-  const db = getDb();
-  const stmt = db.prepare(sql);
-  return stmt.get(...params) as T | undefined;
+export async function query<T = any>(sqlStr: string, ...params: any[]): Promise<T[]> {
+  const { text, values } = convertPlaceholders(sqlStr, params);
+  const result = await sql.query(text, values);
+  return result.rows as T[];
 }
 
-export function execute(sql: string, ...params: any[]): { changes: number; lastInsertRowid: number | bigint } {
-  const db = getDb();
-  const stmt = db.prepare(sql);
-  const result = stmt.run(...params);
-  return { changes: result.changes, lastInsertRowid: result.lastInsertRowid };
+export async function queryOne<T = any>(sqlStr: string, ...params: any[]): Promise<T | undefined> {
+  const rows = await query<T>(sqlStr, ...params);
+  return rows[0];
 }
 
-export function getCount(sql: string, ...params: any[]): number {
-  const row = queryOne<{ count: number }>(sql, ...params);
+export async function execute(sqlStr: string, ...params: any[]): Promise<{ changes: number }> {
+  const { text, values } = convertPlaceholders(sqlStr, params);
+  const result = await sql.query(text, values);
+  return { changes: result.rowCount ?? 0 };
+}
+
+export async function insertOne(sqlStr: string, ...params: any[]): Promise<number> {
+  const insertSql = sqlStr.trim();
+  const hasReturning = /RETURNING\s+/i.test(insertSql);
+  const finalSql = hasReturning ? insertSql : `${insertSql} RETURNING id`;
+  const rows = await query<{ id: number }>(finalSql, ...params);
+  return rows[0]?.id ?? 0;
+}
+
+export async function getCount(sqlStr: string, ...params: any[]): Promise<number> {
+  const row = await queryOne<{ count: number }>(sqlStr, ...params);
   return row?.count ?? 0;
 }

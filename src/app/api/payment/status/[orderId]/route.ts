@@ -5,7 +5,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { orderId: string } }
 ) {
-  const order = queryOne<{ id: number; status: string; order_no: string }>(
+  const order = await queryOne<{ id: number; status: string; order_no: string }>(
     'SELECT id, status, order_no FROM orders WHERE id = ?',
     params.orderId
   );

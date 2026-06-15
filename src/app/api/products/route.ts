@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne, execute, getCount } from '@/lib/db';
+import { query, insertOne, getCount } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
   if (sort === 'price_desc') orderBy = 'ORDER BY p.price DESC';
   if (sort === 'popular') orderBy = 'ORDER BY p.view_count DESC';
 
-  const total = getCount(`SELECT COUNT(*) as count FROM products p ${where}`, ...params);
+  const total = await getCount(`SELECT COUNT(*) as count FROM products p ${where}`, ...params);
 
-  const products = query(
+  const products = await query(
     `SELECT p.*, u.username as seller_name, u.avatar as seller_avatar,
      (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY sort_order LIMIT 1) as cover_image
      FROM products p
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '标题和价格不能为空' }, { status: 400 });
     }
 
-    const result = execute(
+    const productId = await insertOne(
       `INSERT INTO products (seller_id, title, description, price, original_price, category, condition, campus)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       user.id, title, description || '', price, original_price || 0, category || 'other', condition || 'good', campus || ''
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      product: { id: Number(result.lastInsertRowid), title, price },
+      product: { id: productId, title, price },
     });
   } catch (error) {
     return NextResponse.json({ error: '发布失败' }, { status: 500 });

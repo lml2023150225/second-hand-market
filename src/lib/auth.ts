@@ -30,7 +30,7 @@ export async function getCurrentUser() {
   const payload = verifyToken(token);
   if (!payload) return null;
 
-  const user = queryOne<{ id: number; username: string; email: string; avatar: string; balance: number; role: string }>(
+  const user = await queryOne<{ id: number; username: string; email: string; avatar: string; balance: number; role: string }>(
     'SELECT id, username, email, avatar, balance, role FROM users WHERE id = ?',
     payload.userId
   );

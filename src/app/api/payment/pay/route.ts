@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const { order_id } = await request.json();
 
-    const order = queryOne<any>(
+    const order = await queryOne<any>(
       "SELECT * FROM orders WHERE id = ? AND buyer_id = ? AND status = 'pending'",
       order_id, user.id
     );
@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Simulate successful payment
-    execute(
-      "UPDATE orders SET status = 'paid', paid_at = datetime('now', 'localtime') WHERE id = ?",
+    await execute(
+      "UPDATE orders SET status = 'paid', paid_at = NOW()::text WHERE id = ?",
       order_id
     );
 

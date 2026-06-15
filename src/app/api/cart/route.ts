@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
   }
 
-  const items = query(
+  const items = await query(
     `SELECT c.id as cart_id, p.*, u.username as seller_name,
      (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY sort_order LIMIT 1) as cover_image
      FROM cart_items c
@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
   try {
     const { product_id } = await request.json();
 
-    const product = queryOne('SELECT id, status FROM products WHERE id = ?', product_id);
+    const product = await queryOne('SELECT id, status FROM products WHERE id = ?', product_id);
     if (!product || product.status !== 'active') {
       return NextResponse.json({ error: '商品已下架' }, { status: 400 });
     }
 
-    execute(
-      'INSERT OR IGNORE INTO cart_items (user_id, product_id) VALUES (?, ?)',
+    await execute(
+      'INSERT INTO cart_items (user_id, product_id) VALUES (?, ?) ON CONFLICT (user_id, product_id) DO NOTHING',
       user.id, product_id
     );
 

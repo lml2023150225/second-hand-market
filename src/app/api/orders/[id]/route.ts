@@ -11,7 +11,7 @@ export async function GET(
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
   }
 
-  const order = queryOne(
+  const order = await queryOne(
     `SELECT o.*, p.title as product_title, p.description as product_description,
      su.username as seller_name, bu.username as buyer_name
      FROM orders o
@@ -38,7 +38,7 @@ export async function PUT(
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
   }
 
-  const order = queryOne<any>(
+  const order = await queryOne<any>(
     'SELECT * FROM orders WHERE id = ?',
     params.id
   );
@@ -58,8 +58,8 @@ export async function PUT(
         if (order.status !== 'pending') {
           return NextResponse.json({ error: '当前状态不可取消' }, { status: 400 });
         }
-        execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", params.id);
-        execute("UPDATE products SET status = 'active' WHERE id = ?", order.product_id);
+        await execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", params.id);
+        await execute("UPDATE products SET status = 'active' WHERE id = ?", order.product_id);
         break;
       }
 
@@ -70,7 +70,7 @@ export async function PUT(
         if (order.status !== 'paid') {
           return NextResponse.json({ error: '当前状态不可发货' }, { status: 400 });
         }
-        execute("UPDATE orders SET status = 'shipped' WHERE id = ?", params.id);
+        await execute("UPDATE orders SET status = 'shipped' WHERE id = ?", params.id);
         break;
       }
 
@@ -81,12 +81,12 @@ export async function PUT(
         if (order.status !== 'shipped') {
           return NextResponse.json({ error: '当前状态不可确认收货' }, { status: 400 });
         }
-        execute(
-          "UPDATE orders SET status = 'completed', completed_at = datetime('now', 'localtime') WHERE id = ?",
+        await execute(
+          "UPDATE orders SET status = 'completed', completed_at = NOW()::text WHERE id = ?",
           params.id
         );
         // Add money to seller's balance
-        execute('UPDATE users SET balance = balance + ? WHERE id = ?', order.amount, order.seller_id);
+        await execute('UPDATE users SET balance = balance + ? WHERE id = ?', order.amount, order.seller_id);
         break;
       }
 

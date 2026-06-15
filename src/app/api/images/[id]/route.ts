@@ -13,7 +13,7 @@ export async function DELETE(
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
   }
 
-  const img = queryOne<{ id: number; image_path: string; product_id: number }>(
+  const img = await queryOne<{ id: number; image_path: string; product_id: number }>(
     'SELECT pi.*, p.seller_id FROM product_images pi JOIN products p ON pi.product_id = p.id WHERE pi.id = ?',
     params.id
   );
@@ -31,6 +31,6 @@ export async function DELETE(
     fs.unlinkSync(imgPath);
   }
 
-  execute('DELETE FROM product_images WHERE id = ?', params.id);
+  await execute('DELETE FROM product_images WHERE id = ?', params.id);
   return NextResponse.json({ success: true });
 }

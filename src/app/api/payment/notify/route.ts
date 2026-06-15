@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'invalid' }, { status: 400 });
     }
 
-    const order = queryOne<{ id: number; status: string }>(
+    const order = await queryOne<{ id: number; status: string }>(
       "SELECT id, status FROM orders WHERE order_no = ? AND status = 'pending'",
       orderNo
     );
@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'order not found' }, { status: 404 });
     }
 
-    execute(
-      "UPDATE orders SET status = 'paid', paid_at = datetime('now', 'localtime') WHERE id = ?",
+    await execute(
+      "UPDATE orders SET status = 'paid', paid_at = NOW()::text WHERE id = ?",
       order.id
     );
 

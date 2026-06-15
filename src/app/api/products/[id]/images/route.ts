@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { execute } from '@/lib/db';
+import { execute, insertOne } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
@@ -35,11 +35,11 @@ export async function POST(
 
     await writeFile(fullPath, buffer);
 
-    const result = execute(
+    const imageId = await insertOne(
       'INSERT INTO product_images (product_id, image_path, sort_order) VALUES (?, ?, ?)',
       params.id, relativePath, i
     );
-    imageIds.push(Number(result.lastInsertRowid));
+    imageIds.push(imageId);
   }
 
   return NextResponse.json({ success: true, imageIds });

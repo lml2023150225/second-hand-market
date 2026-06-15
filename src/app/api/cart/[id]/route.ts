@@ -11,6 +11,6 @@ export async function DELETE(
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
   }
 
-  execute('DELETE FROM cart_items WHERE id = ? AND user_id = ?', params.id, user.id);
+  await execute('DELETE FROM cart_items WHERE id = ? AND user_id = ?', params.id, user.id);
   return NextResponse.json({ success: true });
 }
